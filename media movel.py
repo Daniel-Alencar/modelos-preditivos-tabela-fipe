@@ -1,3 +1,4 @@
+from sklearn.metrics import r2_score
 import pandas as pd
 import statistics
 
@@ -51,12 +52,16 @@ def prediction(values_to_predict, mes_inicial, mes_final):
 
 
 
+
+
 # Resultados
 data = selection(data, modelo, ano_modelo)
 print(data)
 
 model = data.iloc[0]
 values_to_predict, nulls_indexes = convert_data_in_list(model)
+
+values_to_examine = values_to_predict.copy()
 
 print("")
 print(nulls_indexes)
@@ -68,11 +73,16 @@ for i in range(mes_final + 1 - mes_inicial):
 columns.append("Range")
 columns.append("Y")
 
+valores_preditos = []
+columns_for_valores_preditos = []
+valores_reais = []
+
+
 line_count = 0
 
 while(True):
   occurances = 0
-  for i in range(mes_inicial, mes_final + 1):
+  for i in range(mes_inicial, mes_final + 1 + 1):
     occurances += nulls_indexes.count(i)
   
   print(f"Quantidade de valores nulos para Mês {mes_inicial} - Mês {mes_final}: {occurances}")
@@ -91,6 +101,10 @@ while(True):
 
     values_to_predict[mes_final + 0] = prediction_value
 
+    columns_for_valores_preditos.append(f"Mês {mes_final + 1}")
+    valores_preditos.append(prediction_value)
+    valores_reais.append(values_to_examine[mes_final])
+
   mes_inicial += 1
   mes_final += 1
 
@@ -99,4 +113,52 @@ medias_base["Modelo"] = [modelo for i in range(line_count)]
 medias_base["Ano-modelo"] = [ano_modelo for i in range(line_count)]
 print(medias_base)
 
-# medias_base.to_csv(f"Modelo {modelo}.csv")
+
+
+
+
+
+# Avaliação dos valores preditos
+
+valores = {
+  "Valores reais": valores_reais,
+  "Valores preditos": valores_preditos,
+  "Erros relativos": [valores_reais[i] - valores_preditos[i] for i in range(len(valores_preditos))],
+  "Meses": columns_for_valores_preditos
+}
+
+dados = pd.DataFrame(valores)
+print(dados)
+
+
+
+
+
+
+
+
+
+
+print("\nAnalisando os valores reias e preditos:")
+
+analise_r2_score = r2_score(valores_reais, valores_preditos)
+print(f"Análise R2: {analise_r2_score}")
+
+
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Criando o ambiente do gráfico 
+sns.set_style("white")
+plt.figure(figsize=(10, 10))
+
+# Gráfico de Dispersão
+g = sns.scatterplot(x="Valores preditos", y="Valores reais", data=dados)
+plt.show()
+
+
+
+from sklearn.metrics import mean_absolute_percentage_error
+
+analise_MAPE = mean_absolute_percentage_error(valores_reais, valores_preditos)
+print(f"Análise MAPE: {analise_MAPE}")
