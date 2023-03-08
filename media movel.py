@@ -4,12 +4,12 @@ import statistics
 import locale
 locale.setlocale(locale.LC_ALL, '')
 
-data = pd.read_csv("data.csv")
-modelo = 'LOGAN Authentique Hi-Flex 1.0 16V 4p'
-ano_modelo = 2015
-meses_to_predict = 7
-initial_mes = 24
-final_mes = 35
+data = pd.read_csv("data copy.csv")
+modelo = 'Q3 2.0 TFSI Quat. 211/220cv S-tronic 5p'
+ano_modelo = 2017
+mes_inicial = 1
+mes_final = 15
+lista_de_previsoes = []
 
 # Functions
 def selection(data, modelo, ano_modelo):
@@ -20,19 +20,32 @@ def selection(data, modelo, ano_modelo):
 
   return data
 
-def convert_data_in_list(data_line, mes_inicial, mes_final):
+def convert_data_in_list(data_line):
   values_to_predict = []
+  nulls_indexes = []
+  mes_inicial = 1
+  mes_final = 36
 
-  print(f"Verificando valores de {mes_inicial} à {mes_final}")
   for i in range(mes_inicial, mes_final + 1):
-    values_to_predict.append(locale.atof(data_line[f'Mes {i}']))
+    try:
+      value = locale.atof(data_line[f'Mes {i}'])
+    except:
+      value = None
+      nulls_indexes.append(i)
+    values_to_predict.append(value)
   
-  return values_to_predict
+  print(f"Quantidade de meses: {len(values_to_predict)}")
+  return values_to_predict, nulls_indexes
 
-def prediction(values_to_predict):
+def prediction(values_to_predict, mes_inicial, mes_final):
+
+  values_to_predict = values_to_predict[mes_inicial - 1: mes_final]
+
   # Fazer a predição do mês "mes_final + 1"
-  mean_value = statistics.mean(values_to_predict)  
+  mean_value = statistics.mean(values_to_predict)
+  print(f"Média do mês {mes_inicial} até mês {mes_final}: {mean_value}")
   return mean_value
+
 
 
 
@@ -43,50 +56,47 @@ data = selection(data, modelo, ano_modelo)
 print(data)
 
 model = data.iloc[0]
+values_to_predict, nulls_indexes = convert_data_in_list(model)
 
-values_to_predict = convert_data_in_list(model, initial_mes, final_mes)
+print("")
+print(nulls_indexes)
+print("")
 
-for i in range(meses_to_predict):
-  prediction_value = prediction(values_to_predict)
+columns = []
+for i in range(mes_final + 1 - mes_inicial):
+  columns.append(f"X{i + 1}")
+columns.append("Range")
+columns.append("Y")
 
-  initial_mes -= 1
-  final_mes -= 1
+line_count = 0
 
-
-# # Fazer a base da predição com a média móvel
-# columns = []
-# for i in range(final_mes + 1 - initial_mes):
-#   columns.append(f"X{i + 1}")
-# columns.append("Y")
-# print(columns)
-
-
-# model = data_model.iloc[0]
-
-
-# predictions_list = []
-# mes_predito_list = []
-# for i in range(meses_to_predict):
-#   values_to_predict = []
-
-#   print(f"Verificando valores de {initial_mes} à {final_mes}")
-#   for i in range(initial_mes, final_mes + 1):
-#     values_to_predict.append(locale.atof(model[f'Mes {i}']))
+while(True):
+  occurances = 0
+  for i in range(mes_inicial, mes_final + 1):
+    occurances += nulls_indexes.count(i)
   
-#   # Fazer a predição do mês "final_mes + 1"
-#   mean_value = statistics.mean(values_to_predict)
-#   print(f"Média para o mês {final_mes + 1}: {mean_value}")
-#   values_to_predict.append(mean_value)
-#   mes_predito_list.append(f"Mês {final_mes + 1}")
+  print(f"Quantidade de valores nulos para Mês {mes_inicial} - Mês {mes_final}: {occurances}")
 
-#   predictions_list.append(values_to_predict)
-  
-#   initial_mes -= 1
-#   final_mes -= 1
+  if(mes_final == 36):
+    break
 
-# medias_movels = pd.DataFrame(predictions_list, columns=columns)
+  if(occurances == 0):
+    prediction_value = prediction(values_to_predict, mes_inicial, mes_final)
 
-# medias_movels["Mês predicto"] = mes_predito_list
-# print(medias_movels)
+    line_value = values_to_predict[mes_inicial - 1: mes_final].copy()
+    line_value.append(f"Mês {mes_inicial} - Mês {mes_final}")
+    line_value.append(prediction_value)
+    lista_de_previsoes.append(line_value)
+    line_count += 1
 
-# medias_movels.to_csv(f"Modelo {modelo}.csv")
+    values_to_predict[mes_final + 0] = prediction_value
+
+  mes_inicial += 1
+  mes_final += 1
+
+medias_base = pd.DataFrame(lista_de_previsoes, columns=columns)
+medias_base["Modelo"] = [modelo for i in range(line_count)]
+medias_base["Ano-modelo"] = [ano_modelo for i in range(line_count)]
+print(medias_base)
+
+# medias_base.to_csv(f"Modelo {modelo}.csv")
